@@ -16,6 +16,9 @@ avr-device = "0.2.2"
 [dependencies.arduino-uno]
 git = "https://github.com/Rahix/avr-hal"
 
+[dependencies.dht-sensor]
+git = "https://github.com/michaelbeaumont/dht-sensor"
+
 [profile.dev]
 panic = "abort"
 lto = true

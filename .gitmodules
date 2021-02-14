@@ -1,0 +1,3 @@
+[submodule "dht-sensor"]
+	path = dht-sensor
+	url = ./dht-sensor

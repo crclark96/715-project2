@@ -73,7 +73,7 @@ checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 [[package]]
 name = "dht-sensor"
 version = "0.1.1"
-source = "git+https://github.com/michaelbeaumont/dht-sensor#fa44876720ff54a3631651895d1cd80595849d8f"
+source = "git+https://github.com/crclark96/dht-sensor#c7bf27d9b22b84fc1d83809e14e83c74944f2767"
 dependencies = [
  "embedded-hal",
 ]

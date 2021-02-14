@@ -17,7 +17,7 @@ avr-device = "0.2.2"
 git = "https://github.com/Rahix/avr-hal"
 
 [dependencies.dht-sensor]
-git = "https://github.com/michaelbeaumont/dht-sensor"
+git = "https://github.com/crclark96/dht-sensor"
 
 [profile.dev]
 panic = "abort"

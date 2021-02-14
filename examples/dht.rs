@@ -21,7 +21,7 @@ fn main() -> ! {
         pins.d1.into_output(&mut pins.ddr),
         57600.into_baudrate(),
     );
-    ufmt::uwriteln!(&mut serial, "Hello from Arduino!\r").void_unwrap();
+    ufmt::uwriteln!(&mut serial, "Temperature C, Humidity\r").void_unwrap();
 
 
     loop {
@@ -29,11 +29,11 @@ fn main() -> ! {
         let result = dht11::Reading::read(&mut delay, &mut dht_pin).unwrap();
 
         ufmt::uwriteln!(&mut serial,
-            "Temperature C: {}\r",
-            result.temperature).void_unwrap();
-        ufmt::uwriteln!(&mut serial,
-            "Humidity: {}\r",
-            result.relative_humidity).void_unwrap();
+            "{}.{}, {}.{}\r",
+            result.temperature,
+            result.temperature_decimal,
+            result.relative_humidity,
+            result.relative_humidity_decimal).void_unwrap();
     }
 }
 

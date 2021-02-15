@@ -19,11 +19,7 @@ const INTERRUPT_FREQ_MILLIS: u32 = PRESCALER * TIMER_COUNTS / 16_000; // 16MHz
 const SAMPLE_RATE_MILLIS: u32 = 10_000; // 10 s
 const COUNTER_MAX: u32 = SAMPLE_RATE_MILLIS / INTERRUPT_FREQ_MILLIS;
 
-static MILLIS_COUNTER: avr_device::interrupt::Mutex<cell::Cell<u32>> =
-    avr_device::interrupt::Mutex::new(cell::Cell::new(0));
 static COUNTER: avr_device::interrupt::Mutex<cell::Cell<u32>> =
-    avr_device::interrupt::Mutex::new(cell::Cell::new(0));
-static FLAG: avr_device::interrupt::Mutex<cell::Cell<u8>> =
     avr_device::interrupt::Mutex::new(cell::Cell::new(0));
 
 fn timer_init(tc0: arduino_uno::pac::TC0) {
@@ -46,18 +42,7 @@ fn TIMER0_COMPA() {
     avr_device::interrupt::free(|cs| {
         let counter = COUNTER.borrow(cs).get();
         COUNTER.borrow(cs).set(counter + 1);
-        let millis_counter = MILLIS_COUNTER.borrow(cs).get();
-        MILLIS_COUNTER.borrow(cs).set(millis_counter + INTERRUPT_FREQ_MILLIS);
-
-        if counter == COUNTER_MAX {
-            FLAG.borrow(cs).set(1);
-            COUNTER.borrow(cs).set(0);
-        }
     });
-}
-
-fn millis() -> u32 {
-    avr_device::interrupt::free(|cs| MILLIS_COUNTER.borrow(cs).get())
 }
 
 #[arduino_uno::entry]
@@ -70,6 +55,7 @@ fn main() -> ! {
 
     let mut led = pins.d13.into_output(&mut pins.ddr);
     let mut sensor = pins.d12.into_tri_state(&mut pins.ddr);
+    let mut seconds = 0;
     let mut serial = arduino_uno::Serial::new(
         peripherals.USART0,
         pins.d0,
@@ -77,12 +63,7 @@ fn main() -> ! {
         57600.into_baudrate(),
     );
     let mut delay = arduino_uno::Delay::new();
-    ufmt::uwriteln!(&mut serial, "Milliseconds, Temperature C, Humidity\r").void_unwrap();
-    ufmt::uwriteln!(&mut serial, "Here's a big number: 1234567, {}\r", 1234567u32).void_unwrap();
-    avr_device::interrupt::free(|cs| {
-        MILLIS_COUNTER.borrow(cs).set(0);
-        COUNTER.borrow(cs).set(0);
-    });
+    ufmt::uwriteln!(&mut serial, "Seconds, Temperature C, Humidity\r").void_unwrap();
 
     unsafe { avr_device::interrupt::enable() };
 
@@ -91,17 +72,24 @@ fn main() -> ! {
 
         avr_device::interrupt::free(|cs| {
             // check to see if timer has gone off
-            if FLAG.borrow(cs).get() == 1 {
+            let counter = COUNTER.borrow(cs);
+            if counter.get() >= COUNTER_MAX {
+                counter.set(0);
+                seconds += 10;
                 led.toggle().void_unwrap();
-                let result = dht11::Reading::read(&mut delay, &mut sensor).unwrap();
-                ufmt::uwriteln!(&mut serial,
-                    "{}, {}.{}, {}.{}\r",
-                    millis(),
-                    result.temperature,
-                    result.temperature_decimal,
-                    result.relative_humidity,
-                    result.relative_humidity_decimal).void_unwrap();
-                FLAG.borrow(cs).set(0);
+                match dht11::Reading::read(&mut delay, &mut sensor) {
+                    Ok(result) =>
+                        ufmt::uwriteln!(&mut serial,
+                            "{}, {}.{}, {}.{}\r",
+                            seconds,
+                            result.temperature,
+                            result.temperature_decimal,
+                            result.relative_humidity,
+                            result.relative_humidity_decimal).void_unwrap(),
+                    Err(_) =>
+                        ufmt::uwriteln!(&mut serial,
+                            "sensor error -- skipping to next read\r").void_unwrap(),
+                };
             };
         });
     }
